@@ -74,17 +74,19 @@ const template = s.cartTemplate || '¡Hola {store}! Quiero hacer este pedido:\n\
     if (q) { const lines = load(); const l = lines.find((x) => x.key === q.dataset.key); if (l) save(setQty(lines, l.key, l.qty + Number(q.dataset.qty))); }
   });
 
-  // Add-to-cart forms (product page): the chosen variant arrives as a radio; the product as JSON on the form.
+  // Add-to-cart forms (product page). CAPTURE phase: ClientRouter also listens for submit on document and would
+  // navigate (GET ?variant=…) before a bubbling listener could preventDefault.
   document.addEventListener('submit', (e) => {
     const form = (e.target as HTMLElement).closest<HTMLFormElement>('form[data-add]');
     if (!form) return;
     e.preventDefault();
+    e.stopPropagation(); // never reaches the router's listener
     const item = JSON.parse(form.dataset.add!) as Omit<Line, 'key' | 'qty'>;
     const v = form.querySelector<HTMLInputElement>('input[name=variant]:checked');
     const qty = Number(new FormData(form).get('qty') ?? 1) || 1;
     save(addLine(load(), v ? { ...item, variantId: Number(v.value), options: JSON.parse(v.dataset.options!), max: Number(v.dataset.stock) } : item, qty));
     dlg()?.showModal();
-  });
+  }, true);
 
   addEventListener('storage', (e) => { if (e.key === KEY) render(); }); // other tabs
   document.addEventListener('astro:page-load', render);

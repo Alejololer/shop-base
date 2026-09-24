@@ -89,6 +89,7 @@ Registro de cosas que costaron tiempo. Añadir una entrada cada vez que algo no 
 
 ## Carrito (shop-base)
 - **ClientRouter ejecuta los `<script>` procesados UNA vez**, pero reemplaza el `<body>`. Un listener pegado a un botón muere en la primera navegación. El carrito delega `click`/`submit` en `document` (que sobrevive) y solo re-renderiza en `astro:page-load`. Probar siempre: agregar → navegar → agregar otra vez.
+- **El ClientRouter también escucha `submit` en `document`** y navega (GET `?variant=…&qty=…`) antes de que un listener en burbuja llegue a `preventDefault`: el carrito se guardaba pero la página navegaba y el drawer no abría. El listener de agregar-al-carrito va en **fase de captura** (`addEventListener('submit', fn, true)`) + `stopPropagation`. El smoke HTTP no lo ve; solo un navegador real.
 - **`[].every(...)` es `true`**: un producto sin variantes parecería agotado. `soldOut()` en `src/lib/shop.ts` guarda por `length > 0`; `npm test` cubre ambos caminos.
 - Guardar un producto reemplaza sus variantes (borra e inserta): los ids cambian. Los carritos abiertos guardan opciones y precio como snapshot, así que el mensaje de WhatsApp sigue correcto.
 - `npm test` (lógica pura, sin DB) es lo que corre CI. `npm run check` es un smoke contra un server corriendo con base sembrada.

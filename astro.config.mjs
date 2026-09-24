@@ -12,7 +12,8 @@ export default defineConfig({
   adapter: vercel(),
   integrations: [
     sitemap({
-      filter: (page) => !page.includes('/admin'),
+      // customPages carry the canonical form (no trailing slash); drop the auto-discovered slash duplicates, admin and thank-you.
+      filter: (page) => !/\/(admin|gracias)/.test(page) && (!page.endsWith('/') || new URL(page).pathname === '/'),
       customPages: ['/', '/productos', '/marcas', '/sucursales', '/nosotros', '/contacto'].map((p) => site + p),
     }),
   ],

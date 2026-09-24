@@ -46,6 +46,7 @@ Registro de cosas que costaron tiempo. Añadir una entrada cada vez que algo no 
 - Vercel no cachea peticiones HEAD: para verificar caché usar GET (`curl -s -o /dev/null -D -`) dos veces y buscar `X-Vercel-Cache: HIT`.
 
 ## Imágenes
+- **La cuota gratuita de Vercel Blob es por cuenta, no por store**: todas las tiendas de una misma cuenta comparten almacenamiento y transferencia. Tiendas de clientes con catálogo grande → cuenta/team de Vercel propia del cliente. `src/lib/blob.ts` no redimensiona: subir fotos ya comprimidas.
 - **Wikimedia Commons responde 403 sin `User-Agent`.** Con `-A "Nombre/1.0 (correo)"` la API y las descargas funcionan; el 403 anterior no era de red.
 
 ## Revisión visual (capturas)
@@ -88,6 +89,7 @@ Registro de cosas que costaron tiempo. Añadir una entrada cada vez que algo no 
 - **Cifras que cuentan sin JS**: `@property --n { syntax: '<integer>' }` + `counter-reset: n var(--n)` + `::before { content: counter(n) / '' }` (el `/ ''` lo oculta al lector de pantalla; el número real va en un `sr-only`). La animación solo declara `from { --n: 0 }`; el valor final es el `style="--n:400"` inline.
 
 ## Carrito (shop-base)
+- El sitemap es un endpoint dinámico (`src/pages/sitemap.xml.ts`), no `@astrojs/sitemap`: esa integración corre al compilar y no ve productos creados después desde `/admin`. Cacheado 5 min en CDN como las páginas.
 - **ClientRouter ejecuta los `<script>` procesados UNA vez**, pero reemplaza el `<body>`. Un listener pegado a un botón muere en la primera navegación. El carrito delega `click`/`submit` en `document` (que sobrevive) y solo re-renderiza en `astro:page-load`. Probar siempre: agregar → navegar → agregar otra vez.
 - **El ClientRouter también escucha `submit` en `document`** y navega (GET `?variant=…&qty=…`) antes de que un listener en burbuja llegue a `preventDefault`: el carrito se guardaba pero la página navegaba y el drawer no abría. El listener de agregar-al-carrito va en **fase de captura** (`addEventListener('submit', fn, true)`) + `stopPropagation`. El smoke HTTP no lo ve; solo un navegador real.
 - **`[].every(...)` es `true`**: un producto sin variantes parecería agotado. `soldOut()` en `src/lib/shop.ts` guarda por `length > 0`; `npm test` cubre ambos caminos.

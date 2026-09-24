@@ -17,7 +17,6 @@
     "db:seed": "node --env-file=.env scripts/seed.mjs"
   },
   "dependencies": {
-    "@astrojs/sitemap": "^3.7.4",
     "@astrojs/vercel": "^11.0.10",
     "@tailwindcss/vite": "^4.3.3",
     "@vercel/blob": "^2.8.0",

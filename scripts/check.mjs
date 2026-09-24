@@ -23,6 +23,10 @@ assert.match(polo.text, /name="variant"/, 'variant picker');
 assert.doesNotMatch((await get('/productos/organizador-cocina')).text, /name="variant"|>Agotado</, 'no variants: no picker, never sold out');
 assert.match((await get('/productos/gorra-bordada')).text, />Agotado</, 'all variants at 0: sold out');
 
+const sm = await get('/sitemap.xml');
+assert.match(sm.text, /\/productos\/polo-basico<\/loc><lastmod>/, 'product pages in sitemap');
+assert.doesNotMatch(sm.text, /\/admin|\/gracias/, 'sitemap excludes admin and thank-you');
+assert.match((await get('/robots.txt')).text, /Sitemap: .*\/sitemap\.xml/, 'robots points to sitemap');
 assert.equal((await get('/admin')).status, 302, 'admin must redirect when logged out');
 assert.equal((await get('/no-existe')).status, 404);
 console.log('check ok');

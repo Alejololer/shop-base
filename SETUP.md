@@ -19,7 +19,7 @@ Todo lo que una tienda cambia está en la lista. Si tienes que tocar algo fuera 
 ## 3. Infraestructura (Vercel)
 - [ ] Importar el repo en Vercel (**no** `vercel deploy`: el proyecto debe quedar enlazado a git para deploys por push).
 - [ ] Marketplace → **Neon** (free) conectado al proyecto. `vercel env pull .env`
-- [ ] Storage → **Blob** conectado al proyecto. Verificar la cuota gratuita en el dashboard.
+- [ ] Storage → **Blob** conectado al proyecto. ⚠️ La cuota gratuita de Blob es **compartida por toda la cuenta de Vercel**: cada tienda en la misma cuenta gasta de la misma bolsa. Para una tienda de cliente con muchas fotos, crearla en la cuenta (o team) de Vercel del cliente. Sube fotos comprimidas (≤ 300 KB, 1000×1000): el admin no las redimensiona.
 - [ ] Env vars en Production/Preview/Development: `ADMIN_PASSWORD`, `SESSION_SECRET` (`openssl rand -base64 32`), `PUBLIC_SITE_URL`, `PUBLIC_WHATSAPP`. Guardar las dos primeras en un gestor de contraseñas.
 - [ ] Deployment Protection solo en previews (ver `docs/gotchas.md` › Vercel).
 

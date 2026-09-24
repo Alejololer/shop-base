@@ -1,7 +1,6 @@
 // @ts-check
 import { defineConfig, fontProviders } from 'astro/config';
 import vercel from '@astrojs/vercel';
-import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
 
 const site = process.env.PUBLIC_SITE_URL || 'http://localhost:4321';
@@ -10,13 +9,7 @@ export default defineConfig({
   site,
   output: 'server',
   adapter: vercel(),
-  integrations: [
-    sitemap({
-      // customPages carry the canonical form (no trailing slash); drop the auto-discovered slash duplicates, admin and thank-you.
-      filter: (page) => !/\/(admin|gracias)/.test(page) && (!page.endsWith('/') || new URL(page).pathname === '/'),
-      customPages: ['/', '/productos', '/marcas', '/sucursales', '/nosotros', '/contacto'].map((p) => site + p),
-    }),
-  ],
+  // Sitemap is a dynamic endpoint (src/pages/sitemap.xml.ts) so products added in /admin are listed without a rebuild.
   vite: { plugins: [tailwindcss()] },
   // Per-store: swap families here. Changing names? Also update the <Font> tags in layouts/Site.astro and pages/admin/login.astro.
   fonts: [

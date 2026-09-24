@@ -1,0 +1,23 @@
+---
+import Site from '../layouts/Site.astro';
+import { SITE } from '../config/site';
+import { breadcrumbJsonLd } from '../lib/seo';
+// Per-store copy: edit the three blocks below.
+const points = [
+  ['Productos originales', 'Importamos directamente y verificamos cada pedido antes de enviarlo.'],
+  ['Pedidos por WhatsApp', 'Arma tu carrito, envíalo y coordinamos pago y entrega contigo.'],
+  ['Envíos a todo el país', 'Despachamos por courier o entregamos en persona en la ciudad.'],
+];
+---
+<Site title="Nosotros" description={`Conoce ${SITE.name}. ${SITE.description}`} jsonLd={breadcrumbJsonLd([{ name: 'Inicio', path: '/' }, { name: 'Nosotros', path: '/nosotros' }])}>
+  <section class="container-x pt-[clamp(48px,7vw,96px)]">
+    <p class="reveal eyebrow">Nosotros</p>
+    <h1 class="reveal mt-4 max-w-[18ch] text-[clamp(2.2rem,5vw,4rem)] leading-[1.05]">{SITE.tagline}</h1>
+    <p class="reveal mt-6 max-w-[60ch] text-lg text-fg/72">{SITE.description}</p>
+  </section>
+  <section class="stagger container-x grid gap-10 pb-[clamp(76px,11vw,150px)] pt-[clamp(52px,8vw,96px)] md:grid-cols-3">
+    {points.map(([t, d]) => (
+      <div class="reveal hairline pt-6"><h2 class="text-2xl">{t}</h2><p class="mt-3 text-fg/68">{d}</p></div>
+    ))}
+  </section>
+</Site>

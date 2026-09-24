@@ -1,0 +1,55 @@
+---
+import { actions } from 'astro:actions';
+import Site from '../layouts/Site.astro';
+import { activeLocations, getSettings } from '../db/queries';
+import { SITE } from '../config/site';
+import { breadcrumbJsonLd } from '../lib/seo';
+import { waLink } from '../lib/format';
+
+const result = Astro.getActionResult(actions.lead);
+if (result && !result.error) return Astro.redirect('/gracias');
+const [locs, s] = await Promise.all([activeLocations(), getSettings()]);
+---
+<Site title="Contacto" description={`Escríbenos: te respondemos por WhatsApp. ${SITE.name}.`} jsonLd={breadcrumbJsonLd([{ name: 'Inicio', path: '/' }, { name: 'Contacto', path: '/contacto' }])}>
+  <section class="container-x pt-[clamp(48px,7vw,96px)]">
+    <p class="reveal eyebrow">Contacto</p>
+    <h1 class="reveal mt-4 max-w-[18ch] text-[clamp(2.2rem,5vw,4rem)] leading-[1.05]">¿Buscas algo en particular?</h1>
+    <p class="mt-5 max-w-[52ch] text-fg/70">Si no lo ves en el catálogo, cuéntanos qué necesitas y te avisamos cuando llegue.</p>
+  </section>
+  <section class="container-x grid gap-16 pb-[clamp(76px,11vw,150px)] pt-[clamp(40px,6vw,72px)] lg:grid-cols-2">
+    <form method="POST" action={actions.lead} class="border border-muted/25 bg-raised px-7 py-10 sm:px-10">
+      {result?.error && <p class="mb-6 border-l-2 border-red-600 pl-4 text-sm text-red-700">{result.error.message}</p>}
+      <input type="hidden" name="source" value="/contacto" />
+      <div class="grid gap-6">
+        <div><label class="field-label" for="c-name">Nombre</label><input id="c-name" name="name" class="field" required autocomplete="name" /></div>
+        <div class="grid gap-6 sm:grid-cols-2">
+          <div><label class="field-label" for="c-phone">WhatsApp / teléfono</label><input id="c-phone" name="phone" class="field" required inputmode="tel" autocomplete="tel" /></div>
+          <div><label class="field-label" for="c-email">Correo</label><input id="c-email" name="email" type="email" class="field" autocomplete="email" /></div>
+        </div>
+        <div class="grid gap-6 sm:grid-cols-2">
+          <div><label class="field-label" for="c-city">Ciudad</label><input id="c-city" name="city" class="field" autocomplete="address-level2" /></div>
+          <div><label class="field-label" for="c-product">Producto</label><input id="c-product" name="product" class="field" /></div>
+        </div>
+        <div><label class="field-label" for="c-msg">Mensaje</label><textarea id="c-msg" name="message" class="field" rows="3"></textarea></div>
+      </div>
+      <button class="btn-light mt-9 w-full">Enviar</button>
+    </form>
+    <div>
+      <p class="eyebrow">Directo</p>
+      <div class="mt-6 flex flex-wrap items-center gap-6">
+        {s.whatsapp && <a href={waLink(`Hola ${SITE.name}, tengo una consulta.`, s.whatsapp)} target="_blank" rel="noopener" class="btn-wa">WhatsApp</a>}
+        {SITE.email && <a href={`mailto:${SITE.email}`} class="link-line">{SITE.email}</a>}
+      </div>
+      {locs.length > 0 && (
+        <>
+          <p class="eyebrow mt-16">Sucursales</p>
+          <ul class="mt-6">
+            {locs.map((l) => (
+              <li class="border-b border-muted/15 py-5"><a href={`/sucursales/${l.slug}`} class="hover:text-accent"><span class="display text-xl">{l.city}</span> <span class="text-fg/60">· {l.name}</span></a><br /><span class="text-[15px] text-fg/60">{l.address}</span></li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
+  </section>
+</Site>

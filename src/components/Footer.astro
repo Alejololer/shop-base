@@ -1,0 +1,47 @@
+---
+import { SITE } from '../config/site';
+import { activeLocations } from '../db/queries';
+const locs = await activeLocations();
+const year = new Date().getFullYear();
+const social = [['Instagram', SITE.instagram], ['Facebook', SITE.facebook]].filter(([, url]) => url);
+---
+<footer class="hairline-accent bg-deep text-fg">
+  <div class="container-x pb-12 pt-[clamp(56px,8vw,96px)]">
+    <div class="grid gap-10 text-[15px] text-fg/65 sm:grid-cols-2 lg:grid-cols-4">
+      <div>
+        <p class="display text-2xl text-fg">{SITE.name}</p>
+        <p class="mt-4">{SITE.tagline}</p>
+        {social.length > 0 && (
+          <p class="mt-4 flex gap-5 text-[13px] uppercase tracking-[0.14em]">
+            {social.map(([label, url]) => <a href={url} target="_blank" rel="noopener" class="text-fg/60 hover:text-accent">{label}</a>)}
+          </p>
+        )}
+      </div>
+      <div>
+        <p class="eyebrow">Tienda</p>
+        <ul class="mt-3.5 space-y-2">
+          <li><a href="/productos" class="hover:text-accent">Todos los productos</a></li>
+          <li><a href="/marcas" class="hover:text-accent">{SITE.taxonomy.brand.plural}</a></li>
+          <li><a href="/nosotros" class="hover:text-accent">Nosotros</a></li>
+        </ul>
+      </div>
+      {locs.length > 0 && (
+        <div>
+          <p class="eyebrow">Sucursales</p>
+          <ul class="mt-3.5 space-y-3">
+            {locs.map((l) => <li><a href={`/sucursales/${l.slug}`} class="hover:text-accent"><span class="text-fg">{l.city}</span><br />{l.address}</a></li>)}
+          </ul>
+        </div>
+      )}
+      <div>
+        <p class="eyebrow">Contacto</p>
+        <ul class="mt-3.5 space-y-2">
+          {SITE.phone && <li><a href={`tel:${SITE.phone.replace(/\s/g, '')}`} class="hover:text-accent">{SITE.phone}</a></li>}
+          {SITE.email && <li><a href={`mailto:${SITE.email}`} class="hover:text-accent">{SITE.email}</a></li>}
+          <li><a href="/contacto" class="hover:text-accent">Escríbenos</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="hairline mt-16 pt-6 text-[13px] text-fg/50">© {year} {SITE.legalName}. Todos los derechos reservados.</div>
+  </div>
+</footer>

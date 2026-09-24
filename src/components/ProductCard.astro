@@ -1,0 +1,25 @@
+---
+import type { ProductRow } from '../db/queries';
+import { priceLabel, usd } from '../lib/format';
+import { soldOut } from '../lib/shop';
+const { product: p, brand: b, category: c, variants, eager = false } = Astro.props as ProductRow & { eager?: boolean };
+const img = p.heroUrl ?? p.gallery[0];
+const out = soldOut(variants);
+const eyebrow = [b?.name, c?.name].filter(Boolean).join(' · ');
+---
+<a href={`/productos/${p.slug}`} class="reveal group block">
+  <div class="relative aspect-square overflow-hidden bg-raised-2 after:absolute after:inset-x-0 after:bottom-0 after:z-10 after:h-px after:origin-left after:scale-x-0 after:bg-accent after:transition-transform after:duration-700 after:ease-out-expo group-hover:after:scale-x-100">
+    {img
+      ? <img src={img} alt={p.name} width="800" height="800" loading={eager ? 'eager' : 'lazy'} decoding="async" class:list={['h-full w-full object-cover transition-transform duration-700 ease-out-expo group-hover:scale-[1.04]', out && 'opacity-60']} />
+      : <div class="flex h-full items-center justify-center text-sm uppercase tracking-[0.2em] text-muted">Sin foto</div>}
+    {out
+      ? <span class="absolute left-3 top-3 bg-fg px-2.5 py-1 text-[11px] uppercase tracking-[0.14em] text-page">Agotado</span>
+      : p.compareAt != null && p.price != null && p.compareAt > p.price && <span class="absolute left-3 top-3 bg-accent px-2.5 py-1 text-[11px] uppercase tracking-[0.14em] text-page">Oferta</span>}
+  </div>
+  {eyebrow && <p class="eyebrow mt-5 !text-accent">{eyebrow}</p>}
+  <h3 class="mt-2 text-xl transition-colors duration-500 group-hover:text-accent">{p.name}</h3>
+  <p class="mt-2 flex items-baseline gap-2.5">
+    <span class="text-[17px]">{priceLabel(p.price)}</span>
+    {p.compareAt != null && p.price != null && p.compareAt > p.price && <s class="text-sm text-fg/50">{usd(p.compareAt)}</s>}
+  </p>
+</a>

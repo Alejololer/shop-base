@@ -1,0 +1,40 @@
+---
+import { actions } from 'astro:actions';
+import { eq } from 'drizzle-orm';
+import Admin from '../../../layouts/Admin.astro';
+import { db, schema } from '../../../db/client';
+
+const result = Astro.getActionResult(actions.saveLocation);
+if (result && !result.error) return Astro.redirect('/admin/sucursales');
+const isNew = Astro.params.id === 'nueva';
+const l = isNew ? undefined : await db.query.locations.findFirst({ where: eq(schema.locations.id, Number(Astro.params.id)) });
+if (!isNew && !l) return new Response(null, { status: 404 });
+---
+<Admin title={isNew ? 'Nueva sucursal' : `Editar ${l!.name}`}>
+  <h1 class="text-3xl">{isNew ? 'Nueva sucursal' : `Editar ${l!.name}`}</h1>
+  {result?.error && <p class="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{result.error.message}</p>}
+  <form method="POST" action={actions.saveLocation} class="mt-6 grid max-w-3xl gap-5 rounded-2xl bg-white p-6 ring-1 ring-black/5">
+    {l && <input type="hidden" name="id" value={l.id} />}
+    <div class="grid gap-5 sm:grid-cols-3">
+      <div><label class="label">Ciudad</label><input name="city" class="input" required value={l?.city} placeholder="Quito" /></div>
+      <div><label class="label">Nombre de sucursal</label><input name="name" class="input" required value={l?.name} placeholder="Local centro" /></div>
+      <div><label class="label">Slug (URL)</label><input name="slug" class="input" value={l?.slug} placeholder="quito-norte" /></div>
+    </div>
+    <div><label class="label">Dirección completa</label><input name="address" class="input" required value={l?.address} /></div>
+    <div class="grid gap-5 sm:grid-cols-3">
+      <div><label class="label">Teléfono</label><input name="phone" class="input" value={l?.phone} /></div>
+      <div><label class="label">WhatsApp (solo dígitos, con 593)</label><input name="whatsapp" class="input" value={l?.whatsapp} /></div>
+      <div><label class="label">Horario</label><input name="hours" class="input" value={l?.hours} placeholder="Lun–Vie 08:30–18:30" /></div>
+    </div>
+    <div class="grid gap-5 sm:grid-cols-3">
+      <div class="sm:col-span-1"><label class="label">Link de Google Maps</label><input name="mapsUrl" class="input" value={l?.mapsUrl} /></div>
+      <div><label class="label">Latitud</label><input name="lat" type="number" step="any" class="input" value={l?.lat} /></div>
+      <div><label class="label">Longitud</label><input name="lng" type="number" step="any" class="input" value={l?.lng} /></div>
+    </div>
+    <div class="flex items-center gap-6">
+      <div><label class="label">Orden</label><input name="sort" type="number" class="input w-24" value={l?.sort ?? 0} /></div>
+      <label class="mt-5 flex items-center gap-2 text-sm"><input name="active" type="checkbox" checked={l?.active ?? true} /> Visible en el sitio</label>
+    </div>
+    <div class="flex gap-3"><button class="btn-primary">Guardar</button><a href="/admin/sucursales" class="btn ring-1 ring-black/10">Cancelar</a></div>
+  </form>
+</Admin>

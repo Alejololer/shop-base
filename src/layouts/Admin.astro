@@ -1,0 +1,33 @@
+---
+import { actions } from 'astro:actions';
+import { Font } from 'astro:assets';
+import '../styles/global.css';
+import { SITE } from '../config/site';
+const { title } = Astro.props as { title: string };
+const nav = [['/admin', 'Leads'], ['/admin/productos', 'Productos'], ['/admin/categorias', SITE.taxonomy.category.plural], ['/admin/marcas', SITE.taxonomy.brand.plural], ['/admin/sucursales', 'Sucursales'], ['/admin/ajustes', 'Ajustes']];
+const path = Astro.url.pathname;
+Astro.response.headers.set('Cache-Control', 'private, no-store');
+---
+<html lang={SITE.locale}>
+  <head>
+    <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <Font cssVariable="--font-inter" preload />
+    <Font cssVariable="--font-outfit" preload />
+    <title>{title} · Admin {SITE.name}</title>
+  </head>
+  <body class="min-h-screen bg-surface text-ink text-base leading-normal">
+    <header class="bg-navy text-white">
+      <div class="container-x flex h-14 items-center justify-between gap-4">
+        <a href="/admin" class="flex items-center gap-3"><span class="display text-lg">{SITE.name}</span><span class="text-xs uppercase tracking-widest text-white/60">Admin</span></a>
+        <nav class="flex items-center gap-1 text-sm">
+          {nav.map(([h, l]) => <a href={h} class:list={['rounded-full px-3 py-1.5 hover:bg-white/10', (h === '/admin' ? path === h : path.startsWith(h)) && 'bg-white/15']}>{l}</a>)}
+          <a href="/" target="_blank" class="rounded-full px-3 py-1.5 text-white/70 hover:bg-white/10">Ver sitio ↗</a>
+          <form method="POST" action={'/admin' + actions.logout}><button class="rounded-full px-3 py-1.5 text-white/70 hover:bg-white/10">Salir</button></form>
+        </nav>
+      </div>
+    </header>
+    <main class="container-x py-8"><slot /></main>
+  </body>
+</html>

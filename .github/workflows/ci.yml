@@ -1,0 +1,21 @@
+name: CI
+
+# No secrets needed: without DATABASE_URL the site builds and renders empty (see src/db/client.ts).
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test            # cart, stock and WhatsApp logic
+      - run: npm run typecheck   # astro check
+      - run: npm run build

@@ -1,0 +1,29 @@
+---
+import { actions } from 'astro:actions';
+import Admin from '../../layouts/Admin.astro';
+import { getSettings } from '../../db/queries';
+
+const result = Astro.getActionResult(actions.saveSettings);
+const s = await getSettings();
+const cartDefault = '¡Hola {store}! Quiero hacer este pedido:\n\n{items}\n\nTotal: {total}';
+const productDefault = 'Hola {store}, me interesa "{name}". ¿Está disponible?';
+---
+<Admin title="Ajustes">
+  <h1 class="text-3xl">Ajustes</h1>
+  {result && !result.error && <p class="mt-4 rounded-lg bg-green-50 p-3 text-sm text-green-800">Guardado.</p>}
+  {result?.error && <p class="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{result.error.message}</p>}
+  <form method="POST" action={actions.saveSettings} class="mt-6 grid max-w-3xl gap-5 rounded-2xl bg-white p-6 ring-1 ring-black/5">
+    <div><label class="label">WhatsApp de pedidos (con código de país, solo números)</label><input name="whatsapp" class="input" inputmode="tel" value={s.whatsapp} placeholder="593991234567" /></div>
+    <div>
+      <label class="label">Mensaje del carrito</label>
+      <textarea name="cartTemplate" class="input font-mono text-xs" rows="6" required>{s.cartTemplate || cartDefault}</textarea>
+      <p class="mt-1 text-xs text-slate">Variables: <code>{'{store}'}</code> nombre de la tienda · <code>{'{items}'}</code> lista de productos con opciones · <code>{'{total}'}</code> total.</p>
+    </div>
+    <div>
+      <label class="label">Mensaje de "Preguntar por WhatsApp" en un producto</label>
+      <textarea name="productTemplate" class="input font-mono text-xs" rows="3" required>{s.productTemplate || productDefault}</textarea>
+      <p class="mt-1 text-xs text-slate">Variables: <code>{'{store}'}</code> · <code>{'{name}'}</code> nombre del producto.</p>
+    </div>
+    <div><button class="btn-primary">Guardar</button></div>
+  </form>
+</Admin>

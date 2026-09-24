@@ -1,0 +1,24 @@
+---
+import Site from '../../layouts/Site.astro';
+import { activeBrands, activeProducts } from '../../db/queries';
+import { SITE } from '../../config/site';
+import { breadcrumbJsonLd } from '../../lib/seo';
+const [brands, rows] = await Promise.all([activeBrands(), activeProducts()]);
+const count = (id: number) => rows.filter((r) => r.brand?.id === id).length;
+const { plural } = SITE.taxonomy.brand;
+---
+<Site title={plural} description={`${plural} disponibles en ${SITE.name}. ${SITE.tagline}.`} jsonLd={breadcrumbJsonLd([{ name: 'Inicio', path: '/' }, { name: plural, path: '/marcas' }])}>
+  <section class="container-x pt-[clamp(48px,7vw,96px)]">
+    <p class="reveal eyebrow">Catálogo</p>
+    <h1 class="reveal mt-4 text-[clamp(2.2rem,5vw,4rem)] leading-[1.05]">{plural}</h1>
+  </section>
+  <section class="stagger container-x grid grid-cols-2 gap-5 pb-[clamp(76px,11vw,150px)] pt-10 md:grid-cols-3 lg:grid-cols-4">
+    {brands.length === 0 && <p class="col-span-full text-fg/60">Aún no hay {plural.toLowerCase()} cargadas.</p>}
+    {brands.map((b) => (
+      <a href={`/marcas/${b.slug}`} class="reveal group flex flex-col items-center justify-center gap-3 border border-muted/20 bg-raised px-5 py-10 text-center transition-colors hover:border-fg">
+        {b.logoUrl ? <img src={b.logoUrl} alt={b.name} width="200" height="60" loading="lazy" class="h-12 w-auto object-contain" /> : <span class="display text-2xl">{b.name}</span>}
+        <span class="text-[13px] uppercase tracking-[0.14em] text-fg/55">{count(b.id)} {count(b.id) === 1 ? 'producto' : 'productos'}</span>
+      </a>
+    ))}
+  </section>
+</Site>

@@ -1,0 +1,19 @@
+---
+import { actions } from 'astro:actions';
+import { asc } from 'drizzle-orm';
+import Admin from '../../../layouts/Admin.astro';
+import { db, schema } from '../../../db/client';
+const rows = await db.select().from(schema.locations).orderBy(asc(schema.locations.sort));
+---
+<Admin title="Sucursales">
+  <div class="flex items-center justify-between"><h1 class="text-3xl">Sucursales</h1><a href="/admin/sucursales/nueva" class="btn-primary !py-2 text-xs">+ Nueva sucursal</a></div>
+  <div class="mt-6 grid gap-3">
+    {rows.map((l) => (
+      <div class="flex items-center gap-4 rounded-2xl bg-white p-4 ring-1 ring-black/5">
+        <div class="flex-1"><p class="font-semibold">{l.city} · {l.name} <span class="text-xs text-slate">/sucursales/{l.slug}</span>{!l.active && <span class="ml-2 rounded bg-red-100 px-2 py-0.5 text-[10px] text-red-700">inactiva</span>}</p><p class="text-sm text-slate">{l.address} · {l.hours}</p></div>
+        <a href={`/admin/sucursales/${l.id}`} class="text-sm font-semibold text-navy hover:underline">Editar</a>
+        <form method="POST" action={actions.deleteLocation} onsubmit="return confirm('¿Eliminar sucursal?')"><input type="hidden" name="id" value={l.id} /><button class="text-sm text-red-600 hover:underline">Eliminar</button></form>
+      </div>
+    ))}
+  </div>
+</Admin>

@@ -1,0 +1,43 @@
+---
+import { actions } from 'astro:actions';
+import { asc, eq } from 'drizzle-orm';
+import Admin from '../../../layouts/Admin.astro';
+import { db, schema } from '../../../db/client';
+import { usd } from '../../../lib/format';
+import { soldOut } from '../../../lib/shop';
+const { products, brands, categories, productVariants } = schema;
+const rows = await db
+  .select({ p: products, b: brands, c: categories })
+  .from(products)
+  .leftJoin(brands, eq(products.brandId, brands.id))
+  .leftJoin(categories, eq(products.categoryId, categories.id))
+  .orderBy(asc(categories.sort), asc(products.sort), asc(products.name));
+const variants = await db.select().from(productVariants);
+const vs = (id: number) => variants.filter((v) => v.productId === id);
+---
+<Admin title="Productos">
+  <div class="flex items-center justify-between"><h1 class="text-3xl">Productos ({rows.length})</h1><a href="/admin/productos/nuevo" class="btn-primary !py-2 text-xs">+ Nuevo producto</a></div>
+  <div class="mt-6 grid gap-3">
+    {rows.length === 0 && <p class="rounded-2xl bg-white p-6 text-slate ring-1 ring-black/5">Aún no hay productos.</p>}
+    {rows.map(({ p, b, c }) => {
+      const v = vs(p.id);
+      const stock = v.reduce((n, x) => n + x.stock, 0);
+      return (
+        <div class="flex items-center gap-4 rounded-2xl bg-white p-3 ring-1 ring-black/5">
+          {p.heroUrl ?? p.gallery[0] ? <img src={p.heroUrl ?? p.gallery[0]} alt="" width="64" height="64" class="size-16 rounded-lg object-cover" /> : <div class="size-16 rounded-lg bg-surface"></div>}
+          <div class="min-w-0 flex-1">
+            <p class="font-semibold">{p.name} <span class="text-xs text-slate">/productos/{p.slug}</span>
+              {p.featured && <span class="ml-2 rounded bg-accent/20 px-2 py-0.5 text-[10px]">destacado</span>}
+              {soldOut(v) && <span class="ml-1 rounded bg-amber-100 px-2 py-0.5 text-[10px] text-amber-800">agotado</span>}
+              {!p.active && <span class="ml-1 rounded bg-red-100 px-2 py-0.5 text-[10px] text-red-700">oculto</span>}
+            </p>
+            <p class="text-sm text-slate">{usd(p.price)} · {c?.name ?? 'sin categoría'} · {b?.name ?? 'sin marca'} · {v.length ? `${v.length} variantes, ${stock} en stock` : 'sin variantes'}</p>
+          </div>
+          <a href={`/productos/${p.slug}`} target="_blank" class="text-xs text-slate hover:underline">Ver ↗</a>
+          <a href={`/admin/productos/${p.id}`} class="text-sm font-semibold text-navy hover:underline">Editar</a>
+          <form method="POST" action={actions.deleteProduct} onsubmit="return confirm('¿Eliminar producto?')"><input type="hidden" name="id" value={p.id} /><button class="text-sm text-red-600 hover:underline">Eliminar</button></form>
+        </div>
+      );
+    })}
+  </div>
+</Admin>

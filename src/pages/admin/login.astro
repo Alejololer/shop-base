@@ -1,0 +1,22 @@
+---
+import { actions } from 'astro:actions';
+import { Font } from 'astro:assets';
+import '../../styles/global.css';
+import { SITE } from '../../config/site';
+const result = Astro.getActionResult(actions.login);
+if (result && !result.error) return Astro.redirect('/admin');
+Astro.response.headers.set('Cache-Control', 'private, no-store');
+---
+<html lang="es-EC">
+  <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="robots" content="noindex" /><link rel="icon" href="/favicon.svg" type="image/svg+xml" /><Font cssVariable="--font-inter" preload /><Font cssVariable="--font-outfit" preload /><title>Ingresar · Admin</title></head>
+  <body class="flex min-h-screen items-center justify-center bg-navy p-4">
+    <form method="POST" action={actions.login} class="w-full max-w-sm rounded-2xl bg-white p-8 text-ink shadow-2xl">
+      <p class="display text-center text-3xl">{SITE.name}</p>
+      <h1 class="mt-6 text-center text-2xl">Panel de administración</h1>
+      {result?.error && <p class="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{result.error.message}</p>}
+      <label class="label mt-6" for="pw">Contraseña</label>
+      <input id="pw" name="password" type="password" class="input" required autofocus autocomplete="current-password" />
+      <button class="btn-primary mt-5 w-full">Ingresar</button>
+    </form>
+  </body>
+</html>

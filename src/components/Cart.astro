@@ -1,0 +1,91 @@
+---
+/* Cart drawer. State lives in localStorage; the markup re-renders on every page. The script runs ONCE
+   (ClientRouter keeps the document), so clicks are delegated on `document` and never need re-binding —
+   only render() reruns on astro:page-load. See docs/gotchas.md › View transitions. */
+import { getSettings } from '../db/queries';
+import { SITE } from '../config/site';
+const s = await getSettings();
+const template = s.cartTemplate || '¡Hola {store}! Quiero hacer este pedido:\n\n{items}\n\nTotal: {total}';
+---
+<dialog id="cart" data-wa={s.whatsapp} data-tpl={template.replaceAll('{store}', SITE.name)} data-currency={SITE.currency} data-locale={SITE.locale}
+  class="m-0 ml-auto h-dvh max-h-none w-[min(100vw,28rem)] border-l border-muted/20 bg-raised p-0 text-fg backdrop:backdrop-blur-sm" aria-labelledby="cart-title">
+  <div class="flex h-full flex-col">
+    <div class="flex items-center justify-between border-b border-muted/20 px-6 py-5">
+      <h2 id="cart-title" class="text-2xl">Tu pedido</h2>
+      <button type="button" class="p-2 text-fg/60 hover:text-accent" aria-label="Cerrar" data-cart-close>✕</button>
+    </div>
+    <ul class="flex-1 divide-y divide-muted/15 overflow-y-auto px-6" data-cart-lines></ul>
+    <p class="hidden px-6 py-16 text-center text-fg/60" data-cart-empty>Tu carrito está vacío.</p>
+    <div class="border-t border-muted/20 px-6 pb-[calc(20px+env(safe-area-inset-bottom))] pt-5" data-cart-footer>
+      <div class="flex items-baseline justify-between"><span class="eyebrow">Total</span><output class="display text-2xl" data-cart-total></output></div>
+      <p class="mt-1 hidden text-[13px] text-fg/60" data-cart-partial>Algunos precios se confirman por WhatsApp.</p>
+      <a class="btn-light mt-5 w-full" target="_blank" rel="noopener" data-cart-checkout>Enviar pedido por WhatsApp</a>
+      <p class="mt-3 text-center text-[13px] text-fg/55">Coordinamos pago y entrega por WhatsApp.</p>
+    </div>
+  </div>
+</dialog>
+
+<script>
+  import { addLine, cartMessage, cartTotal, itemCount, money, setQty, waUrl, type Line } from '../lib/shop';
+
+  const KEY = 'cart:v1';
+  const load = (): Line[] => { try { return JSON.parse(localStorage.getItem(KEY) ?? '[]'); } catch { return []; } };
+  const save = (lines: Line[]) => { localStorage.setItem(KEY, JSON.stringify(lines)); render(); };
+  const dlg = () => document.getElementById('cart') as HTMLDialogElement | null;
+  const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+  function render() {
+    const d = dlg();
+    const lines = load();
+    const count = itemCount(lines);
+    document.querySelectorAll<HTMLElement>('[data-cart-count]').forEach((el) => { el.textContent = String(count); el.hidden = count === 0; });
+    if (!d) return;
+    const fmt = (n: number) => money(n, d.dataset.currency, d.dataset.locale);
+    d.querySelector('[data-cart-lines]')!.innerHTML = lines.map((l) => `
+      <li class="flex gap-4 py-5">
+        <a href="/productos/${esc(l.slug)}" class="block size-20 shrink-0 overflow-hidden bg-raised-2">${l.image ? `<img src="${esc(l.image)}" alt="" width="80" height="80" class="size-full object-cover" />` : ''}</a>
+        <div class="min-w-0 flex-1">
+          <p class="truncate">${esc(l.name)}</p>
+          ${l.options.length ? `<p class="text-[13px] text-fg/60">${esc(l.options.join(' · '))}</p>` : ''}
+          <div class="mt-2 flex items-center justify-between">
+            <div class="flex items-center border border-muted/30">
+              <button type="button" class="px-3 py-1" data-qty="-1" data-key="${esc(l.key)}" aria-label="Quitar uno">−</button>
+              <span class="num min-w-6 text-center text-sm">${l.qty}</span>
+              <button type="button" class="px-3 py-1 disabled:opacity-30" data-qty="1" data-key="${esc(l.key)}" aria-label="Agregar uno" ${l.max != null && l.qty >= l.max ? 'disabled' : ''}>+</button>
+            </div>
+            <span class="text-sm">${l.price == null ? 'Por confirmar' : fmt(l.price * l.qty)}</span>
+          </div>
+        </div>
+      </li>`).join('');
+    const { total, partial } = cartTotal(lines);
+    d.querySelector('[data-cart-total]')!.textContent = fmt(total);
+    (d.querySelector('[data-cart-partial]') as HTMLElement).classList.toggle('hidden', !partial);
+    (d.querySelector('[data-cart-empty]') as HTMLElement).classList.toggle('hidden', lines.length > 0);
+    (d.querySelector('[data-cart-footer]') as HTMLElement).classList.toggle('hidden', lines.length === 0);
+    (d.querySelector('[data-cart-checkout]') as HTMLAnchorElement).href = waUrl(d.dataset.wa ?? '', cartMessage(lines, d.dataset.tpl ?? '{items}\n\n{total}', fmt));
+  }
+
+  document.addEventListener('click', (e) => {
+    const t = e.target as HTMLElement;
+    const d = dlg();
+    if (t.closest('[data-cart-open]')) { e.preventDefault(); render(); d?.showModal(); return; }
+    if (t.closest('[data-cart-close]') || t === d) return d?.close();
+    const q = t.closest<HTMLElement>('[data-qty]');
+    if (q) { const lines = load(); const l = lines.find((x) => x.key === q.dataset.key); if (l) save(setQty(lines, l.key, l.qty + Number(q.dataset.qty))); }
+  });
+
+  // Add-to-cart forms (product page): the chosen variant arrives as a radio; the product as JSON on the form.
+  document.addEventListener('submit', (e) => {
+    const form = (e.target as HTMLElement).closest<HTMLFormElement>('form[data-add]');
+    if (!form) return;
+    e.preventDefault();
+    const item = JSON.parse(form.dataset.add!) as Omit<Line, 'key' | 'qty'>;
+    const v = form.querySelector<HTMLInputElement>('input[name=variant]:checked');
+    const qty = Number(new FormData(form).get('qty') ?? 1) || 1;
+    save(addLine(load(), v ? { ...item, variantId: Number(v.value), options: JSON.parse(v.dataset.options!), max: Number(v.dataset.stock) } : item, qty));
+    dlg()?.showModal();
+  });
+
+  addEventListener('storage', (e) => { if (e.key === KEY) render(); }); // other tabs
+  document.addEventListener('astro:page-load', render);
+</script>

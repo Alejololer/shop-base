@@ -1,0 +1,16 @@
+---
+import Site from '../../layouts/Site.astro';
+import LocationCard from '../../components/LocationCard.astro';
+import { activeLocations } from '../../db/queries';
+import { SITE } from '../../config/site';
+import { breadcrumbJsonLd, locationJsonLd } from '../../lib/seo';
+const locs = await activeLocations();
+---
+<Site title="Sucursales" description={`Dónde encontrar ${SITE.name}: direcciones, horarios y WhatsApp.`} jsonLd={[breadcrumbJsonLd([{ name: 'Inicio', path: '/' }, { name: 'Sucursales', path: '/sucursales' }]), { '@context': 'https://schema.org', '@graph': locs.map(locationJsonLd) }]}>
+  <section class="container-x pt-[clamp(48px,7vw,96px)]">
+    <p class="reveal eyebrow">Dónde estamos</p>
+    <h1 class="reveal mt-4 text-[clamp(2.2rem,5vw,4rem)] leading-[1.05]">Sucursales</h1>
+    {locs.length === 0 && <p class="mt-6 max-w-[56ch] text-fg/70">Vendemos en línea con entrega a domicilio. Escríbenos por WhatsApp para coordinar.</p>}
+  </section>
+  <section class="container-x grid gap-14 pb-[clamp(76px,11vw,150px)] pt-[clamp(40px,6vw,72px)] md:grid-cols-3">{locs.map((l) => <LocationCard l={l} />)}</section>
+</Site>

@@ -1,0 +1,30 @@
+---
+import Site from '../../layouts/Site.astro';
+import ProductCard from '../../components/ProductCard.astro';
+import { activeProducts, brandBySlug } from '../../db/queries';
+import { SITE } from '../../config/site';
+import { breadcrumbJsonLd } from '../../lib/seo';
+
+const b = await brandBySlug(Astro.params.slug!);
+if (!b) return new Response(null, { status: 404 });
+const rows = await activeProducts({ brand: b.slug });
+const { plural } = SITE.taxonomy.brand;
+---
+<Site title={`${b.name} en ${SITE.name}`} description={b.tagline ?? `Productos ${b.name} en ${SITE.name}.`} image={b.heroUrl ?? undefined} jsonLd={breadcrumbJsonLd([{ name: 'Inicio', path: '/' }, { name: plural, path: '/marcas' }, { name: b.name, path: `/marcas/${b.slug}` }])}>
+  <section class="relative overflow-hidden bg-deep">
+    {b.heroUrl && <img src={b.heroUrl} alt="" width="1600" height="600" fetchpriority="high" class="absolute inset-0 h-full w-full object-cover opacity-40" />}
+    <div class="container-x relative py-[clamp(56px,9vw,120px)]">
+      <nav aria-label="Migas" class="text-xs tracking-[0.1em] text-fg/55"><a href="/marcas" class="hover:text-accent">{plural}</a></nav>
+      {b.logoUrl
+        ? <img src={b.logoUrl} alt={b.name} width="320" height="96" class="mt-6 h-16 w-auto object-contain" />
+        : <h1 class="mt-5 text-[clamp(2.4rem,6vw,4.6rem)] leading-[1.03]">{b.name}</h1>}
+      {b.tagline && <p class="mt-5 max-w-[52ch] text-lg text-fg/78">{b.tagline}</p>}
+      {b.description && <p class="mt-4 max-w-[60ch] text-fg/65">{b.description}</p>}
+    </div>
+  </section>
+  <section class="container-x pb-[clamp(76px,11vw,150px)] pt-12">
+    {rows.length === 0
+      ? <p class="text-fg/60">No hay productos de {b.name} por ahora.</p>
+      : <div class="stagger grid grid-cols-2 gap-x-5 gap-y-12 lg:grid-cols-4">{rows.map((r, i) => <ProductCard {...r} eager={i < 4} />)}</div>}
+  </section>
+</Site>

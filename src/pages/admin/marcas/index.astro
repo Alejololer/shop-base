@@ -1,0 +1,21 @@
+---
+import { actions } from 'astro:actions';
+import { asc } from 'drizzle-orm';
+import Admin from '../../../layouts/Admin.astro';
+import { db, schema } from '../../../db/client';
+const rows = await db.select().from(schema.brands).orderBy(asc(schema.brands.sort), asc(schema.brands.name));
+---
+<Admin title="Marcas">
+  <div class="flex items-center justify-between"><h1 class="text-3xl">Marcas</h1><a href="/admin/marcas/nueva" class="btn-primary !py-2 text-xs">+ Nueva marca</a></div>
+  <div class="mt-6 grid gap-3">
+    {rows.map((b) => (
+      <div class="flex items-center gap-4 rounded-2xl bg-white p-4 ring-1 ring-black/5">
+        <div class="flex h-14 w-24 items-center justify-center overflow-hidden rounded-lg bg-surface">{b.logoUrl ? <img src={b.logoUrl} alt="" class="h-10 w-auto object-contain" /> : <span class="display text-lg">{b.name}</span>}</div>
+        <div class="flex-1"><p class="font-semibold">{b.name} <span class="text-xs text-slate">/marcas/{b.slug}</span>{!b.active && <span class="ml-2 rounded bg-red-100 px-2 py-0.5 text-[10px] text-red-700">inactiva</span>}</p><p class="text-sm text-slate">{b.tagline}</p></div>
+        <span class="text-xs text-slate">orden {b.sort}</span>
+        <a href={`/admin/marcas/${b.id}`} class="text-sm font-semibold text-navy hover:underline">Editar</a>
+        <form method="POST" action={actions.deleteBrand} onsubmit="return confirm('¿Eliminar marca? Sus productos quedan sin marca.')"><input type="hidden" name="id" value={b.id} /><button class="text-sm text-red-600 hover:underline">Eliminar</button></form>
+      </div>
+    ))}
+  </div>
+</Admin>

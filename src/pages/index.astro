@@ -1,0 +1,102 @@
+---
+import Site from '../layouts/Site.astro';
+import ProductCard from '../components/ProductCard.astro';
+import { activeBrands, activeCategories, activeLocations, activeProducts } from '../db/queries';
+import { SITE } from '../config/site';
+import { orgJsonLd } from '../lib/seo';
+
+const [all, categories, brands, locs] = await Promise.all([activeProducts(), activeCategories(), activeBrands(), activeLocations()]);
+const featured = all.filter((r) => r.product.featured).slice(0, 8);
+const latest = [...all].sort((a, b) => +b.product.createdAt - +a.product.createdAt).slice(0, 8);
+const hero = featured[0]?.product ?? all[0]?.product;
+const heroImg = hero?.heroUrl ?? hero?.gallery[0];
+const catImg = (id: number) => all.find((r) => r.category?.id === id && (r.product.heroUrl || r.product.gallery[0]))?.product;
+const steps = [
+  ['Elige', 'Agrega productos a tu pedido, con talla, tono o color.'],
+  ['Envía', 'Mandas el pedido por WhatsApp con un toque.'],
+  ['Recibe', 'Coordinamos pago y entrega contigo.'],
+];
+---
+<Site title={`${SITE.name} · ${SITE.tagline}`} description={SITE.description} jsonLd={orgJsonLd(locs)}>
+  <!-- Hero: store promise + the featured product's photo. -->
+  <section class="bg-deep">
+    <div class="container-x grid items-center gap-10 py-[clamp(56px,9vw,120px)] lg:grid-cols-2">
+      <div>
+        <p class="rise eyebrow !text-accent" style="--d: .1s">{SITE.name}</p>
+        <h1 class="rise mt-5 max-w-[14ch] text-[clamp(2.6rem,6vw,5rem)] leading-[1.02]" style="--d: .2s">{SITE.tagline}</h1>
+        <p class="rise mt-6 max-w-[48ch] text-lg text-fg/72" style="--d: .35s">{SITE.description}</p>
+        <div class="rise mt-10 flex flex-wrap gap-3" style="--d: .5s">
+          <a href="/productos" class="btn-light">Ver productos</a>
+          <a href="/contacto" class="btn-ghost">¿Buscas algo?</a>
+        </div>
+      </div>
+      {heroImg && (
+        <a href={`/productos/${hero!.slug}`} class="rise block aspect-[4/5] overflow-hidden bg-raised-2 lg:justify-self-end lg:w-[88%]" style="--d: .3s">
+          <img src={heroImg} alt={hero!.name} width="900" height="1125" fetchpriority="high" class="h-full w-full object-cover" />
+        </a>
+      )}
+    </div>
+  </section>
+
+  {categories.length > 0 && (
+    <section class="container-x section-y">
+      <p class="reveal eyebrow">{SITE.taxonomy.category.plural}</p>
+      <div class="stagger mt-10 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+        {categories.map((c) => {
+          const img = c.imageUrl ?? catImg(c.id)?.heroUrl ?? catImg(c.id)?.gallery[0];
+          return (
+            <a href={`/productos?categoria=${c.slug}`} class="reveal group relative block aspect-[4/5] overflow-hidden bg-raised-2">
+              {img && <img src={img} alt="" width="400" height="500" loading="lazy" class="h-full w-full object-cover transition-transform duration-700 ease-out-expo group-hover:scale-105" />}
+              <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/5 to-transparent"></div>
+              <span class="display absolute inset-x-4 bottom-4 text-xl text-white">{c.name}</span>
+            </a>
+          );
+        })}
+      </div>
+    </section>
+  )}
+
+  {featured.length > 0 && (
+    <section class="container-x pb-[clamp(56px,8vw,110px)]">
+      <div class="flex items-end justify-between gap-6">
+        <div><p class="reveal eyebrow">Destacados</p><h2 class="reveal mt-3 text-[clamp(1.8rem,3.6vw,2.8rem)]">Lo más pedido</h2></div>
+        <a href="/productos" class="link-line shrink-0">Ver todo</a>
+      </div>
+      <div class="stagger mt-10 grid grid-cols-2 gap-x-5 gap-y-12 lg:grid-cols-4">{featured.map((r, i) => <ProductCard {...r} eager={i < 2} />)}</div>
+    </section>
+  )}
+
+  <section class="hairline bg-deep">
+    <div class="container-x grid gap-10 py-[clamp(56px,8vw,100px)] md:grid-cols-3">
+      {steps.map(([t, d], i) => (
+        <div class="reveal"><p class="num text-5xl text-accent">0{i + 1}</p><h3 class="mt-4 text-2xl">{t}</h3><p class="mt-2 text-fg/68">{d}</p></div>
+      ))}
+    </div>
+  </section>
+
+  {latest.length > 0 && (
+    <section class="container-x section-y">
+      <p class="reveal eyebrow">Novedades</p>
+      <div class="stagger mt-10 grid grid-cols-2 gap-x-5 gap-y-12 lg:grid-cols-4">{latest.map((r) => <ProductCard {...r} />)}</div>
+    </section>
+  )}
+
+  {brands.length > 0 && (
+    <section class="hairline">
+      <div class="container-x flex flex-wrap items-center justify-center gap-x-12 gap-y-6 py-14">
+        {brands.map((b) => (
+          <a href={`/marcas/${b.slug}`} class="text-fg/55 transition-colors hover:text-fg">
+            {b.logoUrl ? <img src={b.logoUrl} alt={b.name} width="140" height="42" loading="lazy" class="h-9 w-auto object-contain opacity-70 grayscale transition hover:opacity-100 hover:grayscale-0" /> : <span class="display text-xl">{b.name}</span>}
+          </a>
+        ))}
+      </div>
+    </section>
+  )}
+
+  {all.length === 0 && (
+    <section class="container-x section-y">
+      <p class="text-xl">La tienda está lista. Aún no hay productos.</p>
+      <p class="mt-3 text-fg/65">Configura <code>DATABASE_URL</code>, corre <code>npm run db:push</code> y <code>npm run db:seed</code>, o entra a <a class="link-line" href="/admin">/admin</a>.</p>
+    </section>
+  )}
+</Site>

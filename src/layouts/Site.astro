@@ -1,0 +1,75 @@
+---
+import { Font } from 'astro:assets';
+import { ClientRouter } from 'astro:transitions';
+import '../styles/global.css';
+import Seo from '../components/Seo.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import Whatsapp from '../components/Whatsapp.astro';
+import LeadDialog from '../components/LeadDialog.astro';
+import Cart from '../components/Cart.astro';
+import { SITE } from '../config/site';
+
+interface Props {
+  title: string;
+  description: string;
+  image?: string;
+  jsonLd?: object | object[];
+  type?: 'website' | 'article' | 'product';
+}
+const seo = Astro.props;
+// ponytail: 5-minute CDN cache on public pages; admin edits show within that window. Add on-demand revalidation if the client needs instant publish.
+// Set here (not in middleware): headers set after next() in middleware are dropped once the response streams.
+if (Astro.request.method === 'GET') Astro.response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400');
+---
+<html lang={SITE.locale}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#f1efec" />
+    <Font cssVariable="--font-inter" preload />
+    <Font cssVariable="--font-outfit" preload />
+    <Seo {...seo} />
+    <ClientRouter />
+    <!-- Firefox has no scroll-driven animations: hide reveals before first paint (and after each client-side swap, the new <html> lacks the class); the script below plays them on intersection. -->
+    <script is:inline>(() => { const io = () => { if (!CSS.supports('animation-timeline: view()') && matchMedia('(prefers-reduced-motion: no-preference)').matches) document.documentElement.classList.add('io'); }; io(); document.addEventListener('astro:after-swap', io); })();</script>
+  </head>
+  <body class="flex min-h-screen flex-col">
+    <a href="#main" class="sr-only z-50 bg-accent px-4 py-2 text-sm text-page focus:not-sr-only focus:fixed focus:left-4 focus:top-4">Ir al contenido</a>
+    <Header />
+    <main id="main" class="flex-1">
+      <slot />
+    </main>
+    <Footer />
+    <Whatsapp />
+    <LeadDialog />
+    <Cart />
+    <script>
+      // Pinned deliveries gallery: the vertical scroll through the section moves the track horizontally. Driven here in every browser so there is one path and one geometry.
+      const gallery = () => {
+        const s = document.querySelector<HTMLElement>('.hscroll');
+        const track = s?.querySelector<HTMLElement>('.hscroll-track');
+        if (!s || !track) return;
+        // Pinned only when the CSS guard applied (lg+, motion allowed); otherwise it is a native swipe strip and must not stay shifted.
+        if (getComputedStyle(s.querySelector('.hscroll-pin')!).position !== 'sticky') { track.style.translate = ''; return; }
+        const p = Math.min(1, Math.max(0, -s.getBoundingClientRect().top / (s.offsetHeight - innerHeight)));
+        track.style.translate = `${-(track.scrollWidth - track.parentElement!.clientWidth) * p}px 0`;
+      };
+      let queued = false;
+      const tick = () => { if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; gallery(); }); } };
+      addEventListener('scroll', tick, { passive: true });
+      addEventListener('resize', tick);
+
+      // Reveal fallback (html.io, set in <head>): play each entrance once, when the block enters the viewport.
+      let io: IntersectionObserver | undefined;
+      document.addEventListener('astro:page-load', () => {
+        gallery();
+        io?.disconnect();
+        if (!document.documentElement.classList.contains('io')) return;
+        io = new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io!.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
+        document.querySelectorAll('.reveal, .reveal-img, .wipe, .count').forEach((el) => io!.observe(el));
+      });
+    </script>
+  </body>
+</html>

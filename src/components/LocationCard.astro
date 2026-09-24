@@ -1,0 +1,17 @@
+---
+import type { Location } from '../db/schema';
+import { waLink } from '../lib/format';
+const { l } = Astro.props as { l: Location };
+const wa = l.whatsapp ? `https://wa.me/${l.whatsapp.replace(/\D/g, '')}` : waLink(`Hola, quiero información de la sucursal ${l.city}.`);
+---
+<article class="reveal hairline-accent pt-7">
+  <p class="eyebrow !text-accent">{l.city}</p>
+  <h3 class="mt-2 text-2xl"><a href={`/sucursales/${l.slug}`} class="hover:text-accent">{l.name}</a></h3>
+  <p class="mt-3.5 text-[15px] text-fg/70">{l.address}</p>
+  {l.hours && <p class="mt-1 text-[13px] text-fg/50">{l.hours}</p>}
+  <div class="mt-6 flex flex-wrap gap-x-6 gap-y-3">
+    {l.mapsUrl && <a href={l.mapsUrl} target="_blank" rel="noopener" class="link-line">Cómo llegar</a>}
+    <a href={wa} target="_blank" rel="noopener" class="link-line">WhatsApp</a>
+    {l.phone && <a href={`tel:${l.phone.replace(/\s/g, '')}`} class="link-line !border-transparent !text-fg/60 hover:!text-fg">{l.phone}</a>}
+  </div>
+</article>

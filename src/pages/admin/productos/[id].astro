@@ -1,0 +1,70 @@
+---
+import { actions } from 'astro:actions';
+import { asc, eq } from 'drizzle-orm';
+import Admin from '../../../layouts/Admin.astro';
+import { db, schema } from '../../../db/client';
+import { SITE } from '../../../config/site';
+import { rowsToText } from '../../../lib/format';
+import { variantsToText } from '../../../lib/shop';
+
+const result = Astro.getActionResult(actions.saveProduct);
+if (result && !result.error) return Astro.redirect('/admin/productos');
+const isNew = Astro.params.id === 'nuevo';
+const p = isNew ? undefined : await db.query.products.findFirst({ where: eq(schema.products.id, Number(Astro.params.id)) });
+if (!isNew && !p) return new Response(null, { status: 404 });
+const [brands, categories, variants] = await Promise.all([
+  db.select().from(schema.brands).orderBy(asc(schema.brands.name)),
+  db.select().from(schema.categories).orderBy(asc(schema.categories.sort), asc(schema.categories.name)),
+  p ? db.select().from(schema.productVariants).where(eq(schema.productVariants.productId, p.id)).orderBy(asc(schema.productVariants.sort)) : [],
+]);
+const presets = [['Talla', 'Color'], ['Tono', 'Tamaño'], ['Capacidad', 'Color'], ['Presentación', '']];
+---
+<Admin title={isNew ? 'Nuevo producto' : `Editar ${p!.name}`}>
+  <h1 class="text-3xl">{isNew ? 'Nuevo producto' : `Editar ${p!.name}`}</h1>
+  {result?.error && <p class="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{result.error.message}</p>}
+  <form method="POST" action={actions.saveProduct} enctype="multipart/form-data" class="mt-6 grid max-w-4xl gap-5 rounded-2xl bg-white p-6 ring-1 ring-black/5">
+    {p && <input type="hidden" name="id" value={p.id} />}
+    <input type="hidden" name="heroUrl" value={p?.heroUrl ?? ''} />
+    <div class="grid gap-5 sm:grid-cols-2">
+      <div><label class="label">Nombre</label><input name="name" class="input" required value={p?.name} placeholder="Labial mate larga duración" /></div>
+      <div><label class="label">Slug (URL)</label><input name="slug" class="input" value={p?.slug} placeholder="se genera del nombre" /></div>
+    </div>
+    <div class="grid gap-5 sm:grid-cols-4">
+      <div><label class="label">{SITE.taxonomy.category.singular}</label><select name="categoryId" class="input"><option value="">—</option>{categories.map((c) => <option value={c.id} selected={c.id === p?.categoryId}>{c.name}</option>)}</select></div>
+      <div><label class="label">{SITE.taxonomy.brand.singular}</label><select name="brandId" class="input"><option value="">— sin {SITE.taxonomy.brand.singular.toLowerCase()} —</option>{brands.map((b) => <option value={b.id} selected={b.id === p?.brandId}>{b.name}</option>)}</select></div>
+      <div><label class="label">Precio ({SITE.currency})</label><input name="price" type="number" step="0.01" min="0" class="input" value={p?.price} placeholder="vacío = Consultar" /></div>
+      <div><label class="label">Precio antes (oferta)</label><input name="compareAt" type="number" step="0.01" min="0" class="input" value={p?.compareAt} placeholder="opcional" /></div>
+    </div>
+    <div><label class="label">Descripción corta (tarjeta y meta description)</label><input name="shortDesc" class="input" maxlength="160" value={p?.shortDesc} /></div>
+    <div><label class="label">Descripción</label><textarea name="description" class="input" rows="4">{p?.description}</textarea></div>
+
+    <fieldset class="grid gap-4 rounded-xl bg-surface p-4">
+      <legend class="label !mb-0 px-1">Variantes (opcional)</legend>
+      <p class="text-sm text-slate">Nombra hasta dos ejes y lista una variante por línea: <code>eje1|eje2|stock|SKU</code>. Sin líneas = producto sin variantes (siempre disponible). El stock es informativo: descuéntalo aquí cuando confirmes una venta.</p>
+      <div class="grid gap-4 sm:grid-cols-[1fr_1fr_2fr]">
+        <div><label class="label">Eje 1</label><input name="option1Label" class="input" list="axes" value={p?.option1Label} placeholder="Talla" /></div>
+        <div><label class="label">Eje 2</label><input name="option2Label" class="input" list="axes" value={p?.option2Label} placeholder="Color" /></div>
+        <p class="self-end text-xs text-slate">Comunes: {presets.map(([a, b]) => [a, b].filter(Boolean).join(' / ')).join(' · ')}</p>
+      </div>
+      <datalist id="axes">{[...new Set(presets.flat().filter(Boolean))].map((a) => <option value={a} />)}</datalist>
+      <textarea name="variants" class="input font-mono text-xs" rows="6" placeholder={'S|Negro|4|POLO-S-N\nM|Negro|0\nL|Blanco|7'}>{variantsToText(variants)}</textarea>
+    </fieldset>
+
+    <div><label class="label">Ficha técnica (una por línea: Etiqueta|Valor)</label><textarea name="specs" class="input font-mono text-xs" rows="5" placeholder={'Material|100% algodón\nOrigen|Importado'}>{rowsToText(p?.specs ?? [])}</textarea></div>
+    <div class="grid gap-5 sm:grid-cols-2">
+      <div><label class="label">Foto principal (cuadrada, 1000×1000)</label><input name="hero" type="file" accept="image/*" class="input" />{p?.heroUrl && <img src={p.heroUrl} alt="" class="mt-2 size-20 rounded object-cover" />}</div>
+      <div><label class="label">Agregar fotos a la galería</label><input name="gallery" type="file" accept="image/*" multiple class="input" /></div>
+    </div>
+    {p && p.gallery.length > 0 && (
+      <fieldset><legend class="label">Galería actual (desmarca para quitar)</legend>
+        <div class="flex flex-wrap gap-3">{p.gallery.map((u) => <label class="relative block"><img src={u} alt="" class="size-20 rounded object-cover" /><input type="checkbox" name="keepGallery" value={u} checked class="absolute left-1 top-1" /></label>)}</div>
+      </fieldset>
+    )}
+    <div class="flex flex-wrap items-center gap-6">
+      <div><label class="label">Orden</label><input name="sort" type="number" class="input w-24" value={p?.sort ?? 0} /></div>
+      <label class="mt-5 flex items-center gap-2 text-sm"><input name="featured" type="checkbox" checked={p?.featured} /> Destacado en inicio</label>
+      <label class="mt-5 flex items-center gap-2 text-sm"><input name="active" type="checkbox" checked={p?.active ?? true} /> Visible en el sitio</label>
+    </div>
+    <div class="flex gap-3"><button class="btn-primary">Guardar</button><a href="/admin/productos" class="btn ring-1 ring-black/10">Cancelar</a></div>
+  </form>
+</Admin>

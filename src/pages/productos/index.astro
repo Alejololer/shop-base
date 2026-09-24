@@ -1,0 +1,53 @@
+---
+import Site from '../../layouts/Site.astro';
+import ProductCard from '../../components/ProductCard.astro';
+import { activeBrands, activeCategories, activeProducts } from '../../db/queries';
+import { SITE } from '../../config/site';
+import { breadcrumbJsonLd } from '../../lib/seo';
+
+const q = Astro.url.searchParams;
+const filter = { brand: q.get('marca') ?? '', category: q.get('categoria') ?? '' };
+const [brands, categories, rows] = await Promise.all([activeBrands(), activeCategories(), activeProducts(filter)]);
+const cat = categories.find((c) => c.slug === filter.category);
+const brand = brands.find((b) => b.slug === filter.brand);
+const heading = [cat?.name, brand?.name].filter(Boolean).join(' · ') || 'Todos los productos';
+
+// Two independent axes combined in the URL: picking a category keeps the brand and vice versa.
+const href = (next: Partial<typeof filter>) => {
+  const f = { ...filter, ...next };
+  const params = new URLSearchParams();
+  if (f.category) params.set('categoria', f.category);
+  if (f.brand) params.set('marca', f.brand);
+  const s = params.toString();
+  return `/productos${s ? `?${s}` : ''}`;
+};
+const pill = (on: boolean) => [
+  'whitespace-nowrap border px-4 py-2 text-[13px] tracking-[0.04em] transition-colors duration-300',
+  on ? 'border-fg bg-fg text-page' : 'border-muted/30 text-fg/70 hover:border-fg hover:text-fg',
+];
+---
+<Site title={heading} description={`${heading} en ${SITE.name}. ${SITE.tagline}.`} jsonLd={breadcrumbJsonLd([{ name: 'Inicio', path: '/' }, { name: 'Productos', path: '/productos' }])}>
+  <section class="container-x pt-[clamp(48px,7vw,96px)]">
+    <p class="reveal eyebrow">Catálogo</p>
+    <h1 class="reveal mt-4 text-[clamp(2.2rem,5vw,4rem)] leading-[1.05]">{heading}</h1>
+    {categories.length > 0 && (
+      <nav class="mt-10 flex gap-2 overflow-x-auto pb-1" aria-label={SITE.taxonomy.category.plural}>
+        <a href={href({ category: '' })} class:list={pill(!filter.category)} aria-current={!filter.category ? 'page' : undefined}>Todas</a>
+        {categories.map((c) => <a href={href({ category: c.slug })} class:list={pill(filter.category === c.slug)} aria-current={filter.category === c.slug ? 'page' : undefined}>{c.name}</a>)}
+      </nav>
+    )}
+    {brands.length > 0 && (
+      <nav class="mt-3 flex gap-2 overflow-x-auto border-b border-muted/15 pb-6" aria-label={SITE.taxonomy.brand.plural}>
+        <a href={href({ brand: '' })} class:list={pill(!filter.brand)}>Todas las {SITE.taxonomy.brand.plural.toLowerCase()}</a>
+        {brands.map((b) => <a href={href({ brand: b.slug })} class:list={pill(filter.brand === b.slug)}>{b.name}</a>)}
+      </nav>
+    )}
+  </section>
+  <section class="container-x pb-[clamp(76px,11vw,150px)] pt-10">
+    {rows.length === 0 ? (
+      <div class="hairline pt-10"><p class="text-xl">No hay productos con ese filtro.</p><a href="/productos" class="link-line mt-6">Ver todo el catálogo</a></div>
+    ) : (
+      <div class="stagger grid grid-cols-2 gap-x-5 gap-y-12 lg:grid-cols-4">{rows.map((row, i) => <ProductCard {...row} eager={i < 4} />)}</div>
+    )}
+  </section>
+</Site>

@@ -1,0 +1,32 @@
+---
+import Site from '../../layouts/Site.astro';
+import { getSettings, locationBySlug } from '../../db/queries';
+import { SITE } from '../../config/site';
+import { breadcrumbJsonLd, locationJsonLd } from '../../lib/seo';
+import { waLink } from '../../lib/format';
+
+const l = await locationBySlug(Astro.params.slug!);
+if (!l) return new Response(null, { status: 404 });
+const s = await getSettings();
+const mapQuery = encodeURIComponent(l.address);
+const wa = l.whatsapp ? `https://wa.me/${l.whatsapp.replace(/\D/g, '')}` : waLink(`Hola, quiero información de la sucursal ${l.city}.`, s.whatsapp);
+---
+<Site title={`${SITE.name} ${l.city} · ${l.name}`} description={`${SITE.name} en ${l.city}: ${l.address}. ${l.hours ?? ''}`} jsonLd={[{ '@context': 'https://schema.org', ...locationJsonLd(l) }, breadcrumbJsonLd([{ name: 'Inicio', path: '/' }, { name: 'Sucursales', path: '/sucursales' }, { name: l.city, path: `/sucursales/${l.slug}` }])]}>
+  <section class="container-x pt-[clamp(48px,7vw,96px)]">
+    <p class="reveal eyebrow !text-accent">{l.city}</p>
+    <h1 class="reveal mt-4 text-[clamp(2.2rem,5vw,4rem)] leading-[1.05]">{l.name}</h1>
+  </section>
+  <section class="container-x grid gap-16 pb-[clamp(76px,11vw,150px)] pt-[clamp(40px,6vw,72px)] lg:grid-cols-2">
+    <div>
+      <p class="eyebrow">Cómo llegar</p>
+      <p class="mt-5 text-xl">{l.address}</p>
+      {l.hours && <p class="mt-2 text-fg/60">{l.hours}</p>}
+      <div class="mt-8 flex flex-wrap gap-3">
+        <a href={l.mapsUrl ?? `https://www.google.com/maps/search/?api=1&query=${mapQuery}`} target="_blank" rel="noopener" class="btn-light">Abrir en Google Maps</a>
+        <a href={wa} target="_blank" rel="noopener" class="btn-wa">WhatsApp</a>
+        {l.phone && <a href={`tel:${l.phone.replace(/\s/g, '')}`} class="btn-ghost">{l.phone}</a>}
+      </div>
+    </div>
+    <iframe title={`Mapa de ${SITE.name} ${l.city}`} src={`https://www.google.com/maps?q=${mapQuery}&output=embed`} class="min-h-96 w-full border border-muted/15" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+  </section>
+</Site>

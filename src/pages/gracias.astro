@@ -1,0 +1,18 @@
+---
+import Site from '../layouts/Site.astro';
+import { getSettings } from '../db/queries';
+import { SITE } from '../config/site';
+import { waLink } from '../lib/format';
+const s = await getSettings();
+---
+<Site title="Gracias, te contactamos pronto" description={`Recibimos tu mensaje. ${SITE.name} te escribirá por WhatsApp.`}>
+  <section class="container-x py-[clamp(96px,14vw,200px)]">
+    <p class="rise eyebrow !text-accent" style="--d: .1s">Listo</p>
+    <h1 class="rise mt-5 max-w-[16ch] text-[clamp(2.4rem,5.4vw,4.4rem)] leading-[1.05]" style="--d: .22s">Recibimos tu mensaje</h1>
+    <p class="rise mt-6 max-w-[48ch] text-fg/72" style="--d: .4s">Te responderemos por WhatsApp en horario de atención. Si prefieres, escríbenos ahora mismo.</p>
+    <div class="rise mt-10 flex flex-wrap gap-3.5" style="--d: .56s">
+      {s.whatsapp && <a href={waLink('Hola, acabo de enviar un mensaje desde la web.', s.whatsapp)} target="_blank" rel="noopener" class="btn-wa">Abrir WhatsApp</a>}
+      <a href="/productos" class="btn-ghost">Seguir comprando</a>
+    </div>
+  </section>
+</Site>
